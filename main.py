@@ -1,19 +1,21 @@
+# %% Load Models and Setup
 import torch
 from sae_lens import SAE, HookedSAETransformer
-from transformer_lens import ActivationCache, utils
+from transformer_lens import ActivationCache, HookedTransformer, utils
 import plotly.graph_objects as go
 import plotly.subplots as sp
+# from hook_sae import HookedSAETransformer
+# from transformer_lens import ActivationCache, HookedTransformer, utils
+# from transformer_lens.hook_points import HookPoint
 
-def load_models(config):
-    """Load the transformer model and SAE based on config."""
-    device = config.get('device', 'cuda' if torch.cuda.is_available() else 'cpu')
-    model = HookedSAETransformer.from_pretrained("EleutherAI/pythia-70m-deduped", device=device)
-    sae, _, _ = SAE.from_pretrained(
-        release="pythia-70m-deduped-mlp-sm",
-        sae_id="blocks.3.hook_mlp_out",
-        device=device
-    )
-    return model, sae
+device = "cuda" if torch.cuda.is_available() else "cpu"
+sae, cfg_dict, sparsity = SAE.from_pretrained(
+    release = "pythia-70m-deduped-mlp-sm", # see other options in sae_lens/pretrained_saes.yaml
+    sae_id = "blocks.3.hook_mlp_out", # won't always be a hook point
+    device = device
+)
+
+pythia = HookedSAETransformer.from_pretrained("EleutherAI/pythia-70m-deduped", device=device)
 
 # %% Helper Functions
 
