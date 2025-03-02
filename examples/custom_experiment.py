@@ -138,7 +138,7 @@ for key, value in custom_config.items():
 
 # %% Step 1: Load models
 # This only needs to be done once per notebook session
-model, sae, lm, tokenizer = load_experiment_models(config['hardware'])
+model, sae, lm, tokenizer = load_experiment_models(config)
 print(f"Models loaded successfully. Using device: {config['hardware']['device']}")
 
 # %% Step 2: Collect and filter data
@@ -154,9 +154,9 @@ print(f"Data collection complete: {filtered_acts.shape[0]} prompts, {filtered_ac
 # %% Step 3: Cluster features
 # Run clustering analysis on the filtered features
 labels, reduced_acts = run_clustering(
-    filtered_acts, 
-    config['clustering'],
-    visualize=config['clustering'].get('visualize_clusters', True)
+    filtered_acts,
+    original_indices,
+    config['clustering']
 )
 
 print(f"Clustering complete: {len(np.unique(labels))} clusters identified")
@@ -166,23 +166,28 @@ print(f"Clustering complete: {len(np.unique(labels))} clusters identified")
 if config['clustering'].get('explore_clusters', True) and prompts:
     cluster_analysis = analyze_clusters(
         filtered_acts, 
+        original_indices,
         labels, 
-        original_indices, 
-        prompts, 
+        prompts,
+        model,
+        sae,
         config['clustering']
     )
     
-    print(f"Cluster analysis complete for {len(cluster_analysis)} clusters")
+    print(f"Cluster analysis complete")
 
 # %% Step 5: Select target features
 # Select features based on clustering results
-target_features = select_features(
+selection_result = select_features(
     filtered_acts, 
-    labels, 
-    original_indices, 
+    original_indices,
+    labels,
+    cluster_analysis if 'cluster_analysis' in locals() else None,
+    prompts,
     config['clustering']['selection']
 )
 
+target_features = selection_result['selected_indices']
 print(f"Feature selection complete: {len(target_features)} target features identified")
 
 # %% Step 6: Optimize prompts (can be run per feature)
@@ -195,8 +200,7 @@ for feature_id in target_features:
         model, 
         sae, 
         feature_id, 
-        config['optimization'],
-        visualize=config['optimization'].get('visualize_training', True)
+        config['optimization']
     )
     feature_results.append(result)
     
@@ -212,12 +216,14 @@ print(f"Optimization complete for {len(feature_results)} features")
 
 # %% Step 7: Generate explanations (optional)
 if config['explanation'].get('use_lm_coherence', True) and lm is not None:
+    optimization_results = {
+        'target_features': target_features,
+        'feature_results': feature_results
+    }
     explanation_results = generate_explanations(
+        optimization_results,
         model, 
         sae, 
-        feature_results, 
-        lm, 
-        tokenizer, 
         config['explanation']
     )
     

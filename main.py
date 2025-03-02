@@ -15,7 +15,7 @@ from pipeline import (
     generate_explanations,
     visualize_results
 )
-from config import get_default_config, update_config, get_legacy_config
+from config import get_default_config, update_config
 from utils import save_results_to_csv
 
 def run_experiment(model=None, sae=None, config=None, use_cached_data=None):
@@ -37,11 +37,12 @@ def run_experiment(model=None, sae=None, config=None, use_cached_data=None):
     if config is None:
         config = get_default_config()
     
-    # Convert hierarchical config to flat config if needed
-    if 'pipeline' in config:
-        legacy_config = get_legacy_config(config)
-    else:
-        legacy_config = config
+    results = {
+        'target_features': [],
+        'feature_results': [],
+        'explanation_results': None,
+        'cluster_analysis': {}
+    }
     
     # Step 1: Load models
     if model is None or sae is None:
@@ -52,13 +53,6 @@ def run_experiment(model=None, sae=None, config=None, use_cached_data=None):
         if config.get('explanation', {}).get('use_lm_coherence', True):
             lm = GPT2LMHeadModel.from_pretrained('distilgpt2').to(config.get('hardware', {}).get('device', 'cpu'))
             tokenizer = GPT2Tokenizer.from_pretrained('distilgpt2')
-    
-    results = {
-        'target_features': [],
-        'feature_results': [],
-        'explanation_results': None,
-        'cluster_analysis': {}
-    }
     
     # Step 2: Data Collection and Filtering
     if not config.get('pipeline', {}).get('run_data_collection', True):
@@ -80,8 +74,7 @@ def run_experiment(model=None, sae=None, config=None, use_cached_data=None):
     else:
         labels, reduced_acts = run_clustering(
             filtered_acts, 
-            config.get('clustering', {}),
-            visualize=config.get('clustering', {}).get('visualize_clusters', True)
+            config.get('clustering', {})
         )
         
         # Analyze clusters if enabled

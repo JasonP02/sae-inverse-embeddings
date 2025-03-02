@@ -10,7 +10,7 @@ def load_models(config):
     """Load the transformer model and SAE based on config."""
     global model, sae
     if model is None or sae is None:
-        device = config['device']
+        device = config.get('hardware', {}).get('device', 'cuda' if torch.cuda.is_available() else 'cpu')
         model = HookedSAETransformer.from_pretrained("EleutherAI/pythia-70m-deduped", device=device)
         sae, _, _ = SAE.from_pretrained(
             release="pythia-70m-deduped-mlp-sm",

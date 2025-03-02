@@ -70,16 +70,19 @@ def load_processed_data(filename):
         return None
 
 def get_cache_filename(config):
-    """Generate a cache filename based on config parameters."""
+    """Generate a cache filename based on hierarchical config parameters."""
     # Create a unique filename based on key parameters
+    data_config = config.get('data', {})
+    filtering_config = data_config.get('filtering', {})
+    
     params = [
-        f"prompts_{config['n_prompts']}",
-        f"entropy_{config['entropy_threshold_low']:.2f}_{config['entropy_threshold_high']:.2f}",
-        f"sparsity_{config['sparsity_min']:.2f}_{config['sparsity_max']:.2f}"
+        f"prompts_{data_config.get('n_prompts', 100)}",
+        f"entropy_{filtering_config.get('entropy_threshold_low', 0.25):.2f}_{filtering_config.get('entropy_threshold_high', 5.0):.2f}",
+        f"sparsity_{filtering_config.get('sparsity_min', 0.1):.2f}_{filtering_config.get('sparsity_max', 0.95):.2f}"
     ]
     
     # Create directory if it doesn't exist
-    cache_dir = config.get('cache_dir', 'cache')
+    cache_dir = data_config.get('cache_dir', 'cache')
     os.makedirs(cache_dir, exist_ok=True)
     
     return os.path.join(cache_dir, f"processed_data_{'_'.join(params)}.pt") 

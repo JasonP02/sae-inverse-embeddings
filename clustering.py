@@ -22,6 +22,9 @@ def filter_features(acts, config):
     entropy = torch.zeros(n_features, device=acts.device)
     sparsity = torch.zeros(n_features, device=acts.device)
     
+    filtering_config = config.get('filtering', {})
+    activation_threshold = filtering_config.get('activation_threshold', 0.1)
+    
     for i in range(n_features):
         # Use absolute values for entropy calculation
         activations = acts[:, i].abs()  # Changed from clamp(min=0)
@@ -29,7 +32,7 @@ def filter_features(acts, config):
         probs = activations / (activations.sum() + 1e-10)
         entropy[i] = -torch.sum(probs * torch.log(probs + 1e-10))
         # Consider both positive and negative activations for sparsity
-        sparsity[i] = (acts[:, i].abs() > config['activation_threshold']).float().mean()
+        sparsity[i] = (acts[:, i].abs() > activation_threshold).float().mean()
     
     print(f"Entropy range: {entropy.min():.2f} to {entropy.max():.2f}")
     print(f"Sparsity range: {sparsity.min():.2f} to {sparsity.max():.2f}")
@@ -39,10 +42,10 @@ def filter_features(acts, config):
     print(f"Sparsity percentiles: 10%={torch.quantile(sparsity, 0.1):.4f}, 50%={torch.quantile(sparsity, 0.5):.4f}, 90%={torch.quantile(sparsity, 0.9):.4f}")
     
     # Apply filtering mask based on config thresholds
-    mask = (entropy > config['entropy_threshold_low']) & \
-           (entropy < config['entropy_threshold_high']) & \
-           (sparsity > config['sparsity_min']) & \
-           (sparsity < config['sparsity_max'])
+    mask = (entropy > filtering_config.get('entropy_threshold_low', 0.25)) & \
+           (entropy < filtering_config.get('entropy_threshold_high', 5.0)) & \
+           (sparsity > filtering_config.get('sparsity_min', 0.1)) & \
+           (sparsity < filtering_config.get('sparsity_max', 0.95))
     
     print(f"Kept {mask.sum().item()} out of {n_features} features")
     return acts[:, mask], mask.nonzero(as_tuple=True)[0]
@@ -69,13 +72,19 @@ def cluster_features(acts, config):
     norms = np.linalg.norm(feature_acts, axis=1, keepdims=True)
     normalized_acts = feature_acts / (norms + 1e-10)  # Avoid division by zero
     
+    # Get DBSCAN parameters from config
+    dbscan_config = config.get('dbscan', {})
+    eps_values = np.linspace(
+        dbscan_config.get('eps_min', 0.1),
+        dbscan_config.get('eps_max', 5),
+        dbscan_config.get('eps_steps', 30)
+    )
+    min_samples = dbscan_config.get('min_samples', 1)
+    
     # DBSCAN with cosine distance
-    eps_values = np.linspace(config['dbscan_eps_min'], 
-                            config['dbscan_eps_max'], 
-                            config['dbscan_eps_steps'])
     best_eps, best_score = None, -1
     for eps in eps_values:
-        clusterer = DBSCAN(eps=eps, min_samples=config['dbscan_min_samples'], metric='cosine')
+        clusterer = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine')
         labels = clusterer.fit_predict(normalized_acts)
         n_clusters = len(np.unique(labels)) - (1 if -1 in labels else 0)  # Exclude noise
         if n_clusters > 1 and n_clusters < len(normalized_acts):
@@ -85,9 +94,9 @@ def cluster_features(acts, config):
                 best_eps = eps
     if best_eps is None:
         print("No valid clustering found, defaulting to eps midpoint")
-        best_eps = (config['dbscan_eps_min'] + config['dbscan_eps_max']) / 2
+        best_eps = (dbscan_config.get('eps_min', 0.1) + dbscan_config.get('eps_max', 5)) / 2
     
-    clusterer = DBSCAN(eps=best_eps, min_samples=config['dbscan_min_samples'], metric='cosine')
+    clusterer = DBSCAN(eps=best_eps, min_samples=min_samples, metric='cosine')
     labels = clusterer.fit_predict(normalized_acts)
     n_clusters = len(np.unique(labels)) - (1 if -1 in labels else 0)
     print(f"DBSCAN with eps={best_eps:.2f}, found {n_clusters} clusters (excluding noise)")
@@ -153,7 +162,7 @@ def select_target_features(acts, labels, original_indices, config):
     """
     # Get feature selection parameters from config
     top_n = config.get('features_per_cluster', 1)
-    cluster_strategy = config.get('cluster_selection_strategy', 'all')
+    cluster_strategy = config.get('strategy', 'all')
     
     # Get unique valid cluster labels (excluding noise points with label -1)
     unique_labels = [label for label in np.unique(labels) if label != -1]
@@ -177,7 +186,7 @@ def select_target_features(acts, labels, original_indices, config):
         
         elif cluster_strategy == 'top_n':
             # Use top N highest scoring clusters
-            num_clusters = min(config.get('num_clusters_to_select', 3), len(sorted_clusters))
+            num_clusters = min(config.get('num_clusters', 3), len(sorted_clusters))
             unique_labels = [cluster[0] for cluster in sorted_clusters[:num_clusters]]
             print(f"Using top {num_clusters} clusters: {unique_labels}")
             
@@ -219,7 +228,7 @@ def score_clusters(acts, labels, config):
         Dictionary mapping cluster labels to scores
     """
     cluster_scores = {}
-    scoring_method = config.get('cluster_scoring_method', 'composite')
+    scoring_method = config.get('scoring_method', 'composite')
     
     for label in np.unique(labels):
         if label == -1:  # Skip noise
@@ -243,25 +252,27 @@ def score_clusters(acts, labels, config):
             
         elif scoring_method == 'sparsity':
             # How specific/sparse are the activations
-            threshold = config['activation_threshold']
+            threshold = config.get('filtering', {}).get('activation_threshold', 0.1)
             sparsity = (torch.abs(cluster_acts) > threshold).float().mean().item()
             score = sparsity * (1 - sparsity)  # Highest for medium sparsity
             
         elif scoring_method == 'composite':
-            # Balanced composite score
-            avg_act = torch.mean(torch.abs(cluster_acts)).item() # Average activation magnitude
-            max_act = torch.max(torch.abs(cluster_acts)).item() # Maximum activation magnitude
-            # Size matters but with diminishing returns (log)
-            size_factor = np.log(1 + cluster_size)
-            # Combine factors
-            score = avg_act * max_act * size_factor
+            # Combine multiple metrics
+            avg_act = torch.mean(torch.abs(cluster_acts)).item()
+            max_act = torch.max(torch.abs(cluster_acts)).item()
+            threshold = config.get('filtering', {}).get('activation_threshold', 0.1)
+            sparsity = (torch.abs(cluster_acts) > threshold).float().mean().item()
+            sparsity_score = sparsity * (1 - sparsity)
             
-        else:
-            # Default fallback
-            score = cluster_size
-            
-        cluster_scores[label] = score
+            # Weighted combination
+            score = (0.4 * avg_act + 0.3 * max_act + 0.3 * sparsity_score) * np.log1p(cluster_size)
         
+        else:
+            print(f"Unknown scoring method '{scoring_method}', defaulting to size")
+            score = cluster_size
+        
+        cluster_scores[label] = score
+    
     return cluster_scores
 
 def visualize_cluster_prompt_heatmap(cluster_prompt_matrix, unique_labels, prompts, max_prompts=50):

@@ -55,7 +55,8 @@ def calculate_lm_coherence(P, model, tokenizer, lm, config):
     """Calculate language model coherence score for a sequence."""
     tokens_by_pos = get_similar_tokens(model, P, top_k=1)
     text = " ".join([t[0][0] for t in tokens_by_pos])
-    inputs = tokenizer(text, return_tensors='pt', truncation=True).to(config['device'])
+    device = config.get('hardware', {}).get('device', 'cpu')
+    inputs = tokenizer(text, return_tensors='pt', truncation=True).to(device)
     outputs = lm(**inputs, labels=inputs['input_ids'])
     return outputs.loss
 
@@ -63,28 +64,29 @@ def optimize_explanation(model, sae, feature_id, initial_prompt, tokenizer, lm, 
     """Optimize an explanation to maximize feature activation."""
     tokens = model.to_tokens(initial_prompt)
     P = torch.nn.Parameter(model.W_E[tokens[0]])
+    device = config.get('hardware', {}).get('device', 'cpu')
     
     # Define which positions to freeze (e.g., "This feature detects")
     frozen_mask = torch.zeros_like(P, dtype=torch.bool)
     frozen_mask[:4] = True  # Freeze first 4 tokens
     
     # Optimize
-    optimizer = torch.optim.AdamW([P], lr=config.get('lr_explanation', config['lr']))
+    optimizer = torch.optim.AdamW([P], lr=config.get('lr', 1e-3))
     
-    for step in range(config.get('max_steps_explanation', config['max_steps'])):
+    for step in range(config.get('max_steps', 1000)):
         optimizer.zero_grad()
         
         # Get activations
-        acts = get_feature_activations(model, sae, torch.zeros(1, P.shape[0], dtype=torch.long, device=config['device']), P)
+        acts = get_feature_activations(model, sae, torch.zeros(1, P.shape[0], dtype=torch.long, device=device), P)
         activation = acts[0, :, feature_id].max()
         
         # Calculate losses
         feature_loss = -activation
         
         # Coherence loss using language model (optional)
-        if config.get('use_lm_coherence', False):
+        if config.get('use_lm_coherence', True):
             coherence_loss = calculate_lm_coherence(P, model, tokenizer, lm, config)
-            total_loss = feature_loss + config['coherence_weight'] * coherence_loss
+            total_loss = feature_loss + config.get('coherence_weight', 0.1) * coherence_loss
         else:
             total_loss = feature_loss
             
@@ -99,7 +101,7 @@ def optimize_explanation(model, sae, feature_id, initial_prompt, tokenizer, lm, 
         # Don't regularize frozen positions
         embedding_diff[frozen_mask] = 0
         embedding_dist = torch.norm(embedding_diff, p='fro')
-        reg_loss = config.get('lambda_reg_explanation', config['lambda_reg']) * embedding_dist
+        reg_loss = config.get('lambda_reg', 1e-5) * embedding_dist
         
         total_loss += reg_loss
         

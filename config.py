@@ -17,6 +17,14 @@ def get_default_config():
             'device': 'cuda' if torch.cuda.is_available() else 'cpu',
         },
         
+        # Model settings
+        'model': {
+            'transformer': "EleutherAI/pythia-70m-deduped",
+            'sae_release': "pythia-70m-deduped-mlp-sm",
+            'sae_hook': "blocks.3.hook_mlp_out",
+            'lm': "distilgpt2"  # For coherence scoring
+        },
+        
         # Data collection & processing settings
         'data': {
             # Collection parameters
@@ -45,10 +53,13 @@ def get_default_config():
             # General clustering settings
             'method': 'dbscan',              # 'dbscan' or 'kmeans'
             'visualize_clusters': True,      # Visualize with UMAP
+            'n_clusters': 10,                # For kmeans or as target for DBSCAN
+            'pca_multiplier': 3,             # n_components = pca_multiplier * n_clusters
             
             # Cluster analysis
             'explore_clusters': True,                # Enable cluster activation analysis
             'visualize_cluster_heatmap': True,       # Show heatmap of cluster vs prompt activations
+            'max_prompts_heatmap': 50,              # Maximum prompts to show in heatmap
             
             # DBSCAN specific parameters
             'dbscan': {
@@ -62,7 +73,7 @@ def get_default_config():
             'selection': {
                 'strategy': 'all',           # Options: 'all', 'single', 'top_n'
                 'num_clusters': 3,           # If strategy is 'top_n', how many to select
-                'scoring_method': 'composite',  # How to score clusters
+                'scoring_method': 'composite',  # How to score clusters: 'size', 'activation', 'max_activation', 'sparsity', 'composite'
                 'features_per_cluster': 1,   # How many features to take from each cluster
                 'feature_selection_method': 'max',  # How to select features: 'mean', 'max', 'percentile'
                 'activation_percentile': 90,  # Percentile to use if method='percentile'
@@ -89,16 +100,19 @@ def get_default_config():
             # Visualization
             'visualize_training': False,
             'show_full_sequence': True,
+            'verbose': True,                 # Print optimization progress
         },
         
         # Explanation generation parameters
         'explanation': {
-            'use_lm_coherence': True,
-            'coherence_weight': 0.1,
+            'use_lm_coherence': True,        # Use language model for coherence
+            'coherence_weight': 0.1,         # Weight of coherence loss
             'max_steps': 1000,
             'lr': 1e-3,
             'lambda_reg': 1e-5,
             'length': 10,
+            'optimize_explanations': True,    # Whether to optimize explanations
+            'frozen_prefix_length': 4,        # Number of tokens to freeze at start
         },
         
         # Output settings
@@ -125,122 +139,4 @@ def update_config(base_config, updates):
                 d[k] = v
         return d
     
-    return _update_dict_recursive(result, updates)
-
-def get_legacy_config(hierarchical_config):
-    """Convert hierarchical config to flat legacy format for backward compatibility."""
-    flat_config = {}
-    
-    # Extract hardware settings
-    if 'hardware' in hierarchical_config:
-        flat_config.update({
-            'device': hierarchical_config['hardware'].get('device', 'cpu')
-        })
-    
-    # Extract data settings
-    if 'data' in hierarchical_config:
-        data_config = hierarchical_config['data']
-        flat_config.update({
-            'n_prompts': data_config.get('n_prompts', 100),
-            'min_prompt_length': data_config.get('min_prompt_length', 10),
-            'max_prompt_length': data_config.get('max_prompt_length', 100),
-            'batch_size': data_config.get('batch_size', 10),
-            'cache_data': data_config.get('cache_data', True),
-            'cache_dir': data_config.get('cache_dir', 'feature_cache'),
-            'use_cached_data': data_config.get('use_cached_data', False)
-        })
-        
-        # Extract filtering settings
-        if 'filtering' in data_config:
-            filtering = data_config['filtering']
-            flat_config.update({
-                'entropy_threshold_low': filtering.get('entropy_threshold_low', 0.25),
-                'entropy_threshold_high': filtering.get('entropy_threshold_high', 5.0),
-                'sparsity_min': filtering.get('sparsity_min', 0.1),
-                'sparsity_max': filtering.get('sparsity_max', 0.95),
-                'activation_threshold': filtering.get('activation_threshold', 0.1)
-            })
-    
-    # Extract clustering settings
-    if 'clustering' in hierarchical_config:
-        clustering = hierarchical_config['clustering']
-        flat_config.update({
-            'clustering_method': clustering.get('method', 'dbscan'),
-            'visualize_clusters': clustering.get('visualize_clusters', True),
-            'explore_clusters': clustering.get('explore_clusters', True),
-            'visualize_cluster_heatmap': clustering.get('visualize_cluster_heatmap', True)
-        })
-        
-        # DBSCAN settings
-        if 'dbscan' in clustering:
-            dbscan = clustering['dbscan']
-            flat_config.update({
-                'dbscan_eps_min': dbscan.get('eps_min', 0.1),
-                'dbscan_eps_max': dbscan.get('eps_max', 5),
-                'dbscan_eps_steps': dbscan.get('eps_steps', 30),
-                'dbscan_min_samples': dbscan.get('min_samples', 1)
-            })
-        
-        # Selection settings
-        if 'selection' in clustering:
-            selection = clustering['selection']
-            flat_config.update({
-                'cluster_selection_strategy': selection.get('strategy', 'all'),
-                'num_clusters_to_select': selection.get('num_clusters', 3),
-                'cluster_scoring_method': selection.get('scoring_method', 'composite'),
-                'features_per_cluster': selection.get('features_per_cluster', 1),
-                'feature_selection_method': selection.get('feature_selection_method', 'max'),
-                'activation_percentile': selection.get('activation_percentile', 90)
-            })
-    
-    # Extract optimization settings
-    if 'optimization' in hierarchical_config:
-        optimization = hierarchical_config['optimization']
-        flat_config.update({
-            'length': optimization.get('length', 10),
-            'max_steps': optimization.get('max_steps', 250),
-            'lr': optimization.get('lr', 1e-3),
-            'lambda_reg': optimization.get('lambda_reg', 1e-5),
-            'diversity_penalty': optimization.get('diversity_penalty', 0.0),
-            'diversity_window': optimization.get('diversity_window', 5),
-            'repetition_penalty': optimization.get('repetition_penalty', 0.0),
-            'repetition_window': optimization.get('repetition_window', 5),
-            'noise_scale': optimization.get('noise_scale', 0.5),
-            'visualize_training': optimization.get('visualize_training', False),
-            'show_full_sequence': optimization.get('show_full_sequence', True)
-        })
-    
-    # Extract explanation settings
-    if 'explanation' in hierarchical_config:
-        explanation = hierarchical_config['explanation']
-        flat_config.update({
-            'use_lm_coherence': explanation.get('use_lm_coherence', True),
-            'coherence_weight': explanation.get('coherence_weight', 0.1),
-            'max_steps_explanation': explanation.get('max_steps', 1000),
-            'lr_explanation': explanation.get('lr', 1e-3),
-            'lambda_reg_explanation': explanation.get('lambda_reg', 1e-5),
-            'length_explanation': explanation.get('length', 10)
-        })
-    
-    # Extract output settings
-    if 'output' in hierarchical_config:
-        output = hierarchical_config['output']
-        flat_config.update({
-            'verbose': output.get('verbose', True),
-            'save_results': output.get('save_results', False),
-            'save_csv': output.get('save_csv', True),
-            'csv_output_dir': output.get('csv_output_dir', 'feature_results')
-        })
-    
-    # Add pipeline control flags
-    if 'pipeline' in hierarchical_config:
-        pipeline = hierarchical_config['pipeline']
-        flat_config.update({
-            'run_data_collection': pipeline.get('run_data_collection', True),
-            'run_clustering': pipeline.get('run_clustering', True),
-            'run_feature_selection': pipeline.get('run_feature_selection', True),
-            'run_prompt_optimization': pipeline.get('run_prompt_optimization', True),
-            'run_explanations': pipeline.get('run_explanations', True)
-        })
-    
-    return flat_config 
+    return _update_dict_recursive(result, updates) 

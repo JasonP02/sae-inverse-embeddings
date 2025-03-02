@@ -3,17 +3,19 @@ from models import get_feature_activations, get_similar_tokens
 
 def optimize_embeddings(model, sae, target_feature, config):
     """Optimize embeddings to maximize activation of a target feature."""
-    length = config['length']
+    length = config.get('length', 10)
     device = model.cfg.device
+    noise_scale = config.get('noise_scale', 0.5)
+    
     P = torch.nn.Parameter(
         model.W_E[torch.randint(0, model.cfg.d_vocab, (length,))] + 
-        torch.randn(length, model.cfg.d_model, device=device) * config['noise_scale']
+        torch.randn(length, model.cfg.d_model, device=device) * noise_scale
     )
-    optimizer = torch.optim.AdamW([P], lr=config['lr'], weight_decay=0)
+    optimizer = torch.optim.AdamW([P], lr=config.get('lr', 1e-3), weight_decay=0)
     dummy_tokens = torch.zeros(1, length, dtype=torch.long, device=device)
     stats = {'loss': [], 'target_activation': []}
 
-    for step in range(config['max_steps']):
+    for step in range(config.get('max_steps', 250)):
         optimizer.zero_grad()
         acts = get_feature_activations(model, sae, dummy_tokens, P)
         target_activation = acts[0, :, target_feature].max()
@@ -25,34 +27,36 @@ def optimize_embeddings(model, sae, target_feature, config):
             closest_embeddings = model.W_E[closest_tokens]
         embedding_diff = P - closest_embeddings
         embedding_dist = torch.norm(embedding_diff, p='fro')
-        loss_reg = config['lambda_reg'] * embedding_dist
+        loss_reg = config.get('lambda_reg', 1e-5) * embedding_dist
         
         token_diversity_penalty = 0.0
-        if config['diversity_penalty'] > 0:
+        diversity_penalty = config.get('diversity_penalty', 0.0)
+        if diversity_penalty > 0:
             window_size = config.get('diversity_window', 5)
             with torch.no_grad():
                 sim_matrix = torch.nn.functional.cosine_similarity(
                     P.unsqueeze(1), P.unsqueeze(0), dim=2
                 )  # [length, length]
                 mask = torch.triu(torch.ones_like(sim_matrix), diagonal=1)  # Upper triangle
-                window_mask = torch.abs(torch.arange(config['length'], device=device).unsqueeze(0) - 
-                                    torch.arange(config['length'], device=device).unsqueeze(1)) <= window_size
+                window_mask = torch.abs(torch.arange(length, device=device).unsqueeze(0) - 
+                                    torch.arange(length, device=device).unsqueeze(1)) <= window_size
                 local_mask = mask * window_mask
-                token_diversity_penalty = (sim_matrix * local_mask).sum() / local_mask.sum() * config['diversity_penalty']
+                token_diversity_penalty = (sim_matrix * local_mask).sum() / local_mask.sum() * diversity_penalty
         else:
             token_diversity_penalty = torch.tensor(0.0, device=device)
 
         repetition_penalty = 0.0
-        if config['repetition_penalty'] > 0:
+        rep_penalty = config.get('repetition_penalty', 0.0)
+        if rep_penalty > 0:
             window_size = config.get('repetition_window', 5)
             with torch.no_grad():
-                local_repeats = torch.zeros(config['length'], device=device)
+                local_repeats = torch.zeros(length, device=device)
                 for offset in range(1, window_size + 1):
                     # Compare with tokens shifted forward and backward
                     forward = torch.cat([closest_tokens[offset:], torch.full((offset,), -1, device=device)])
                     backward = torch.cat([torch.full((offset,), -1, device=device), closest_tokens[:-offset]])
                     local_repeats += (closest_tokens == forward).float() + (closest_tokens == backward).float()
-                repetition_penalty = config['repetition_penalty'] * local_repeats.sum() / config['length']
+                repetition_penalty = rep_penalty * local_repeats.sum() / length
         else:
             repetition_penalty = torch.tensor(0.0, device=device)
 
@@ -71,7 +75,8 @@ def optimize_embeddings(model, sae, target_feature, config):
 
 def analyze_results(model, sae, P, target_feature, config):
     """Analyze the results of optimization."""
-    dummy_tokens = torch.zeros(1, config['length'], dtype=torch.long, device=model.cfg.device)
+    length = config.get('length', 10)
+    dummy_tokens = torch.zeros(1, length, dtype=torch.long, device=model.cfg.device)
     acts = get_feature_activations(model, sae, dummy_tokens, P)
     tokens_by_pos = get_similar_tokens(model, P, top_k=1)
 
@@ -93,7 +98,7 @@ def analyze_results(model, sae, P, target_feature, config):
     print(f"\n=== RESULTS FOR FEATURE {target_feature} ===")
     
     # Show top activating positions
-    pos_activations = [(pos, acts[0, pos, target_feature].item()) for pos in range(config['length'])]
+    pos_activations = [(pos, acts[0, pos, target_feature].item()) for pos in range(length)]
     top_positions = sorted(pos_activations, key=lambda x: x[1], reverse=True)[:10]
     
     print(f"Target feature activation: {acts[0, :, target_feature].max():.4f}")
@@ -103,9 +108,9 @@ def analyze_results(model, sae, P, target_feature, config):
         print(f"Position {pos}: {act_val:.4f} - '{token}' ({score:.3f})")
     
     # Show full sequence for reference
-    if config.get('show_full_sequence', False):
+    if config.get('show_full_sequence', True):
         print("\nFull optimized sequence:")
-        for pos in range(config['length']):
+        for pos in range(length):
             token, score = tokens_by_pos[pos][0]
             print(f"Position {pos}: {acts[0, pos, target_feature].item():.4f} - '{token}' ({score:.3f})")
             
