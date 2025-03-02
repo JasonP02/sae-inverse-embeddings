@@ -153,11 +153,41 @@ def select_target_features(acts, labels, original_indices, config):
     """
     # Get feature selection parameters from config
     top_n = config.get('features_per_cluster', 1)
+    cluster_strategy = config.get('cluster_selection_strategy', 'all')
     
+    # Get unique valid cluster labels (excluding noise points with label -1)
+    unique_labels = [label for label in np.unique(labels) if label != -1]
+    
+    # Determine which clusters to use based on strategy
+    if cluster_strategy != 'all':
+        # Score all clusters
+        cluster_scores = score_clusters(acts, labels, config)
+        
+        # Sort clusters by score (descending)
+        sorted_clusters = sorted(cluster_scores.items(), key=lambda x: x[1], reverse=True)
+        
+        if cluster_strategy == 'single':
+            # Use only the highest scoring cluster
+            if sorted_clusters:
+                unique_labels = [sorted_clusters[0][0]]
+                print(f"Using single highest-scoring cluster: {unique_labels[0]} (score: {sorted_clusters[0][1]:.4f})")
+            else:
+                unique_labels = []
+                print("No valid clusters found for selection")
+        
+        elif cluster_strategy == 'top_n':
+            # Use top N highest scoring clusters
+            num_clusters = min(config.get('num_clusters_to_select', 3), len(sorted_clusters))
+            unique_labels = [cluster[0] for cluster in sorted_clusters[:num_clusters]]
+            print(f"Using top {num_clusters} clusters: {unique_labels}")
+            
+            # Print scores for selected clusters
+            for cluster, score in sorted_clusters[:num_clusters]:
+                print(f"Cluster {cluster}: score = {score:.4f}")
+    
+    # Select features from the chosen clusters
     target_features = []
-    for label in np.unique(labels):
-        if label == -1:  # Noise in DBSCAN
-            continue
+    for label in unique_labels:
         cluster_mask = labels == label
         cluster_acts = acts[:, cluster_mask]
         cluster_indices = original_indices[cluster_mask]
@@ -175,4 +205,209 @@ def select_target_features(acts, labels, original_indices, config):
             print(f"Cluster {label}: No valid features found")
             
     print(f"Total target features: {len(target_features)}")
-    return target_features 
+    return target_features
+
+def score_clusters(acts, labels, config):
+    """Score clusters based on their properties relevant to SAE features.
+    
+    Args:
+        acts: Tensor of shape [n_prompts, n_filtered_features] containing feature activations
+        labels: Numpy array of cluster labels
+        config: Configuration dictionary with scoring parameters
+        
+    Returns:
+        Dictionary mapping cluster labels to scores
+    """
+    cluster_scores = {}
+    scoring_method = config.get('cluster_scoring_method', 'composite')
+    
+    for label in np.unique(labels):
+        if label == -1:  # Skip noise
+            continue
+            
+        cluster_mask = labels == label
+        cluster_size = np.sum(cluster_mask)
+        cluster_acts = acts[:, cluster_mask]
+        
+        if scoring_method == 'size':
+            # Simple size-based scoring
+            score = cluster_size
+        
+        elif scoring_method == 'activation':
+            # Average activation magnitude
+            score = torch.mean(torch.abs(cluster_acts)).item()
+            
+        elif scoring_method == 'max_activation':
+            # Maximum activation in cluster
+            score = torch.max(torch.abs(cluster_acts)).item()
+            
+        elif scoring_method == 'sparsity':
+            # How specific/sparse are the activations
+            threshold = config['activation_threshold']
+            sparsity = (torch.abs(cluster_acts) > threshold).float().mean().item()
+            score = sparsity * (1 - sparsity)  # Highest for medium sparsity
+            
+        elif scoring_method == 'composite':
+            # Balanced composite score
+            avg_act = torch.mean(torch.abs(cluster_acts)).item() # Average activation magnitude
+            max_act = torch.max(torch.abs(cluster_acts)).item() # Maximum activation magnitude
+            # Size matters but with diminishing returns (log)
+            size_factor = np.log(1 + cluster_size)
+            # Combine factors
+            score = avg_act * max_act * size_factor
+            
+        else:
+            # Default fallback
+            score = cluster_size
+            
+        cluster_scores[label] = score
+        
+    return cluster_scores
+
+def visualize_cluster_prompt_heatmap(cluster_prompt_matrix, unique_labels, prompts, max_prompts=50):
+    """Visualize clusters vs prompts activation as a heatmap.
+    
+    Args:
+        cluster_prompt_matrix: Numpy array of shape [n_clusters, n_prompts] with activation values
+        unique_labels: List of cluster labels corresponding to rows in the matrix
+        prompts: List of original prompts
+        max_prompts: Maximum number of prompts to show (to avoid overcrowding)
+        
+    Returns:
+        None (displays a plotly figure)
+    """
+    # Limit the number of prompts to avoid overcrowding
+    n_prompts = min(max_prompts, cluster_prompt_matrix.shape[1])
+    
+    # If we have too many prompts, select a subset uniformly
+    if len(prompts) > n_prompts:
+        indices = np.linspace(0, len(prompts)-1, n_prompts, dtype=int)
+        selected_prompts = [prompts[i] for i in indices]
+        selected_matrix = cluster_prompt_matrix[:, indices]
+    else:
+        selected_prompts = prompts
+        selected_matrix = cluster_prompt_matrix
+    
+    # Truncate prompts for better display
+    truncated_prompts = [p[:30] + "..." if len(p) > 30 else p for p in selected_prompts]
+    
+    # Create the heatmap
+    fig = go.Figure(data=go.Heatmap(
+        z=selected_matrix,
+        x=truncated_prompts,
+        y=[f"Cluster {label}" for label in unique_labels],
+        colorscale='Viridis',
+        colorbar=dict(title="Activation")
+    ))
+    
+    fig.update_layout(
+        title="Cluster vs Prompt Activation Heatmap",
+        xaxis=dict(
+            title="Prompts",
+            tickangle=45,
+        ),
+        yaxis=dict(
+            title="Clusters",
+        ),
+        height=max(400, 100 + 20 * len(unique_labels)),  # Dynamic height based on cluster count
+        width=max(800, 100 + 10 * n_prompts),  # Dynamic width based on prompt count
+    )
+    
+    fig.show()
+
+def explore_cluster_activations(acts, labels, original_indices, prompts, config):
+    """Explore which prompts most strongly activate each cluster.
+    
+    Args:
+        acts: Tensor of shape [n_prompts, n_filtered_features] containing filtered feature activations
+        labels: Numpy array of cluster labels
+        original_indices: Tensor containing the original indices of the filtered features
+        prompts: List of text prompts used to generate the activations
+        config: Configuration dictionary with parameters
+        
+    Returns:
+        Dictionary with cluster analysis results
+    """
+    if len(prompts) != acts.shape[0]:
+        print(f"Warning: Number of prompts ({len(prompts)}) doesn't match activation batch size ({acts.shape[0]})")
+        print("Cannot perform prompt-based cluster analysis")
+        return {}
+    
+    # Track results for each cluster
+    cluster_analysis = {}
+    
+    # Get unique valid cluster labels (excluding noise points with label -1)
+    unique_labels = [label for label in np.unique(labels) if label != -1]
+    print(f"\n=== Cluster Activation Analysis ===")
+    print(f"Found {len(unique_labels)} clusters to analyze")
+    
+    # For each cluster
+    for label in unique_labels:
+        # Get features in this cluster
+        cluster_mask = labels == label
+        cluster_size = np.sum(cluster_mask)
+        cluster_indices = original_indices[cluster_mask]
+        
+        # Get activations for all prompts on this cluster's features
+        cluster_acts = acts[:, cluster_mask]  # [n_prompts, n_cluster_features]
+        
+        # Compute average activation of each prompt on this cluster's features
+        prompt_activations = torch.mean(torch.abs(cluster_acts), dim=1)  # [n_prompts]
+        
+        # Find top activating prompts
+        top_k = min(5, len(prompts))  # Show top 5 prompts or all if fewer
+        top_prompt_indices = torch.argsort(prompt_activations, descending=True)[:top_k]
+        
+        # Format output with truncated prompts (first 50 chars)
+        top_prompts = [(prompts[i], prompt_activations[i].item()) for i in top_prompt_indices]
+        
+        # Store results
+        cluster_analysis[label] = {
+            'size': cluster_size,
+            'indices': cluster_indices.tolist(),
+            'top_prompts': top_prompts,
+            'mean_activation': torch.mean(torch.abs(cluster_acts)).item(),
+            'prompt_activations': prompt_activations.cpu().numpy()  # Store all prompt activations
+        }
+        
+        # Print results
+        print(f"\nCluster {label} ({cluster_size} features):")
+        print(f"  Feature indices: {cluster_indices.tolist()[:5]}{'...' if cluster_size > 5 else ''}")
+        print(f"  Mean activation: {cluster_analysis[label]['mean_activation']:.4f}")
+        print(f"  Top activating prompts:")
+        for i, (prompt, act) in enumerate(top_prompts):
+            truncated = prompt[:50] + ("..." if len(prompt) > 50 else "")
+            print(f"    {i+1}. \"{truncated}\" (activation: {act:.4f})")
+    
+    # Find clusters with similar prompt activation patterns
+    print("\n=== Clusters with Similar Activation Patterns ===")
+    if len(unique_labels) > 1:  # Only if we have multiple clusters
+        # Create matrix of [cluster, prompt_activation]
+        cluster_prompt_matrix = np.zeros((len(unique_labels), len(prompts)))
+        for i, label in enumerate(unique_labels):
+            cluster_mask = labels == label
+            cluster_acts = acts[:, cluster_mask]
+            cluster_prompt_matrix[i] = torch.mean(torch.abs(cluster_acts), dim=1).cpu().numpy()
+        
+        # Create the heatmap visualization
+        if config.get('visualize_cluster_heatmap', True):
+            print("\nGenerating cluster vs prompt activation heatmap...")
+            visualize_cluster_prompt_heatmap(cluster_prompt_matrix, unique_labels, prompts)
+        
+        # Normalize each cluster's activations
+        normalized_matrix = cluster_prompt_matrix / (np.linalg.norm(cluster_prompt_matrix, axis=1, keepdims=True) + 1e-10)
+        
+        # Compute correlation matrix between clusters based on prompt activations
+        correlation_matrix = np.corrcoef(normalized_matrix)
+        
+        # Find most similar pairs
+        np.fill_diagonal(correlation_matrix, 0)  # Zero out self-correlations
+        for i, label_i in enumerate(unique_labels):
+            # Get top 2 most similar clusters
+            similar_indices = np.argsort(correlation_matrix[i])[-2:][::-1]
+            if len(similar_indices) > 0 and correlation_matrix[i, similar_indices[0]] > 0.5:  # Only show if correlation > 0.5
+                similar_labels = [unique_labels[j] for j in similar_indices]
+                similarities = [correlation_matrix[i, j] for j in similar_indices]
+                print(f"Cluster {label_i} is similar to: " + ", ".join([f"Cluster {l} (corr: {s:.2f})" for l, s in zip(similar_labels, similarities)]))
+    
+    return cluster_analysis 

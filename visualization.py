@@ -78,28 +78,34 @@ def visualize_multiple_features(results_dict, top_n=5):
 def visualize_token_heatmap(results, feature_id):
     """Visualize token activations as a heatmap."""
     result = results[feature_id]
-    tokens = [t[0][0] for t in result['tokens']]
+    # Use high_act_tokens instead of tokens
+    tokens = [t for t, _ in result['high_act_tokens']]
     activations = [act for _, act in result['activations']]
     
     # Create heatmap
     fig = go.Figure(data=go.Heatmap(
         z=[activations],
-        x=list(range(len(tokens))),
+        x=list(range(len(activations))),
         y=['Activation'],
         colorscale='Viridis',
         showscale=True
     ))
     
-    # Add token labels
-    for i, token in enumerate(tokens):
-        fig.add_annotation(
-            x=i,
-            y=0,
-            text=token,
-            showarrow=False,
-            textangle=-90,
-            yshift=10
-        )
+    # Add token labels for positions with tokens
+    token_positions = {pos: token for pos, act in result['activations'] 
+                      for token, _ in result['high_act_tokens'] if act > 0}
+    
+    for i, (pos, _) in enumerate(result['activations']):
+        token = token_positions.get(pos, "")
+        if token:
+            fig.add_annotation(
+                x=i,
+                y=0,
+                text=token,
+                showarrow=False,
+                textangle=-90,
+                yshift=10
+            )
     
     fig.update_layout(
         title=f"Token Activations for Feature {feature_id}",

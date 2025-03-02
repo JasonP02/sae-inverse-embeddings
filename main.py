@@ -1,117 +1,147 @@
 import torch
 import os
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
+import numpy as np
 
 # Import modules
 from models import load_models, clear_cache
-from data import load_diverse_prompts, collect_activations, get_cache_filename, load_processed_data, save_processed_data
-from clustering import filter_features, cluster_features, visualize_clusters, select_target_features
-from optimization import optimize_embeddings, analyze_results
-from visualization import visualize_training, visualize_feature_activations, visualize_multiple_features
-from explanation import run_explanation_experiment
-from config import get_default_config, update_config
+from pipeline import (
+    load_experiment_models,
+    collect_and_filter_data,
+    run_clustering,
+    analyze_clusters,
+    select_features,
+    optimize_feature,
+    generate_explanations,
+    visualize_results
+)
+from config import get_default_config, update_config, get_legacy_config
+from utils import save_results_to_csv
 
-def run_experiment(config, use_cached_data=True):
-    """Run the full experiment pipeline."""
-    # Step 0: Load models
-    model, sae = load_models(config)
+def run_experiment(model=None, sae=None, config=None, use_cached_data=None):
+    """Run the full experiment pipeline with the given configuration.
     
-    # Initialize language model for explanations if needed
-    if config.get('use_lm_coherence', True):
-        lm = GPT2LMHeadModel.from_pretrained('distilgpt2').to(config['device'])
-        tokenizer = GPT2Tokenizer.from_pretrained('distilgpt2')
+    This is a simplified wrapper around the modular pipeline functions,
+    allowing for batch execution of the full pipeline.
+    
+    Args:
+        model: The transformer model (optional, will be loaded if None)
+        sae: The sparse autoencoder model (optional, will be loaded if None)
+        config: Configuration dictionary (optional, will use default if None)
+        use_cached_data: Whether to use cached data (overrides config setting)
+        
+    Returns:
+        Dictionary with experiment results
+    """
+    # Use default config if none provided
+    if config is None:
+        config = get_default_config()
+    
+    # Convert hierarchical config to flat config if needed
+    if 'pipeline' in config:
+        legacy_config = get_legacy_config(config)
     else:
+        legacy_config = config
+    
+    # Step 1: Load models
+    if model is None or sae is None:
+        model, sae, lm, tokenizer = load_experiment_models(config)
+    else:
+        # Load LM if needed for explanations
         lm, tokenizer = None, None
+        if config.get('explanation', {}).get('use_lm_coherence', True):
+            lm = GPT2LMHeadModel.from_pretrained('distilgpt2').to(config.get('hardware', {}).get('device', 'cpu'))
+            tokenizer = GPT2Tokenizer.from_pretrained('distilgpt2')
     
-    # Try to load cached data if requested
-    cache_filename = get_cache_filename(config)
-    cached_data = None
+    results = {
+        'target_features': [],
+        'feature_results': [],
+        'explanation_results': None,
+        'cluster_analysis': {}
+    }
     
-    if use_cached_data:
-        cached_data = load_processed_data(cache_filename)
+    # Step 2: Data Collection and Filtering
+    if not config.get('pipeline', {}).get('run_data_collection', True):
+        print("Skipping data collection as specified in config")
+        return results
     
-    if cached_data is not None:
-        # Use cached data
-        filtered_acts = cached_data['filtered_acts']
-        original_indices = cached_data['original_indices']
-        print(f"Using cached data with {filtered_acts.shape[0]} prompts and {filtered_acts.shape[1]} filtered features")
+    filtered_acts, original_indices, prompts = collect_and_filter_data(
+        model, sae, 
+        config.get('data', {}), 
+        use_cached=use_cached_data
+    )
+    
+    # Step 3: Clustering
+    if not config.get('pipeline', {}).get('run_clustering', True):
+        print("Skipping clustering as specified in config")
+        labels = np.zeros(filtered_acts.shape[1], dtype=int)  # Default all to same cluster
+        reduced_acts = filtered_acts.T.cpu().numpy()
+        cluster_analysis = {}
     else:
-        # Process data from scratch
-        # Step 1: Load diverse prompts
-        prompts = load_diverse_prompts(config)
+        labels, reduced_acts = run_clustering(
+            filtered_acts, 
+            config.get('clustering', {}),
+            visualize=config.get('clustering', {}).get('visualize_clusters', True)
+        )
         
-        # Step 2: Collect activations from prompts
-        acts = collect_activations(model, sae, prompts, config)
-        
-        # Step 3: Filter features
-        filtered_acts, original_indices = filter_features(acts, config)
-        
-        # Save processed data for future use if requested
-        if config.get('cache_data', True):
-            save_processed_data({
-                'filtered_acts': filtered_acts,
-                'original_indices': original_indices
-            }, cache_filename)
+        # Analyze clusters if enabled
+        if config.get('clustering', {}).get('explore_clusters', True) and prompts:
+            results['cluster_analysis'] = analyze_clusters(
+                filtered_acts, 
+                labels, 
+                original_indices, 
+                prompts, 
+                config.get('clustering', {})
+            )
     
-    # Step 4: Cluster features
-    labels, reduced_acts = cluster_features(filtered_acts, config)
-    
-    # Step 5: Visualize clusters (optional)
-    if config.get('visualize_clusters', True):
-        visualize_clusters(reduced_acts, labels)
-    
-    # Step 6: Select target features from clusters
-    target_features = select_target_features(filtered_acts, labels, original_indices, config)
-    
-    # Step 7: Run prompt optimization for each feature
-    feature_results = []
-    for i, target_feature in enumerate(target_features):
-        print(f"\nOptimizing for feature {target_feature} ({i+1}/{len(target_features)})")
-        P, stats = optimize_embeddings(model, sae, target_feature, config)
-        result = analyze_results(model, sae, P, target_feature, config)
-        
-        if config.get('visualize_training', True):
-            visualize_training(stats)
-        
-        # Store comprehensive results for each feature
-        dummy_tokens = torch.zeros(1, config['length'], dtype=torch.long, device=config['device'])
-        acts = get_feature_activations(model, sae, dummy_tokens, P)
-        tokens_by_pos = get_similar_tokens(model, P, top_k=1)
-        
-        # Extract high-activating tokens with their activations
-        pos_activations = [(pos, acts[0, pos, target_feature].item(), tokens_by_pos[pos][0][0], tokens_by_pos[pos][0][1]) 
-                           for pos in range(config['length'])]
-        sorted_activations = sorted(pos_activations, key=lambda x: x[1], reverse=True)
-        
-        # Store all the data we need for this feature
-        feature_data = {
-            'feature_id': target_feature,
-            'embeddings': P.detach().clone(),
-            'stats': stats,
-            'activations': [(pos, act) for pos, act, _, _ in sorted_activations],
-            'high_act_tokens': [(token, act) for _, act, token, _ in sorted_activations if act > config['activation_threshold']]
-        }
-        feature_results.append(feature_data)
-        
-        # Clear cache between features
-        clear_cache()
-    
-    # Step 8: Generate explanations if requested
-    explanation_results = None
-    if config.get('generate_explanations', True) and lm is not None:
-        print("\n=== Generating Feature Explanations ===")
-        explanation_results = run_explanation_experiment(
-            model, sae, 
-            {'target_features': target_features, 'feature_results': feature_results},
-            tokenizer, lm, config
+    # Step 4: Feature Selection
+    if not config.get('pipeline', {}).get('run_feature_selection', True):
+        print("Skipping feature selection as specified in config")
+        results['target_features'] = []
+    else:
+        results['target_features'] = select_features(
+            filtered_acts, 
+            labels, 
+            original_indices, 
+            config.get('clustering', {}).get('selection', {})
         )
     
-    # Return comprehensive results
-    return {
-        'target_features': target_features,
-        'feature_results': feature_results,
-        'explanation_results': explanation_results
-    }
+    # Step 5: Prompt Optimization
+    if not results['target_features'] or not config.get('pipeline', {}).get('run_prompt_optimization', True):
+        if not results['target_features']:
+            print("No target features selected, skipping prompt optimization")
+        else:
+            print("Skipping prompt optimization as specified in config")
+        return results
+    
+    for i, target_feature in enumerate(results['target_features']):
+        print(f"\nOptimizing for feature {target_feature} ({i+1}/{len(results['target_features'])})")
+        feature_data = optimize_feature(
+            model, 
+            sae, 
+            target_feature, 
+            config.get('optimization', {})
+        )
+        results['feature_results'].append(feature_data)
+    
+    # Step 6: Explanation Generation
+    if not results['feature_results'] or not config.get('pipeline', {}).get('run_explanations', True):
+        if not results['feature_results']:
+            print("No feature results available, skipping explanations")
+        else:
+            print("Skipping explanation generation as specified in config")
+        return results
+    
+    results['explanation_results'] = generate_explanations(
+        model, 
+        sae, 
+        results['feature_results'], 
+        lm, 
+        tokenizer, 
+        config.get('explanation', {})
+    )
+    
+    return results
 
 def main():
     """Main entry point."""
@@ -120,14 +150,20 @@ def main():
     
     # Example of updating config with custom values
     # custom_config = {
-    #     'n_prompts': 50,
-    #     'max_steps': 100,
-    #     'visualize_clusters': True
+    #     'data': {
+    #         'n_prompts': 50,
+    #     },
+    #     'optimization': {
+    #         'max_steps': 100,
+    #     },
+    #     'clustering': {
+    #         'visualize_clusters': True
+    #     }
     # }
     # config = update_config(config, custom_config)
     
     # Run the experiment
-    results = run_experiment(config, use_cached_data=config.get('use_cached_data', True))
+    results = run_experiment(config=config)
     
     # Print summary
     print("\n=== EXPERIMENT SUMMARY ===")
@@ -148,6 +184,14 @@ def main():
                 
             if 'optimized_explanation' in result:
                 print(f"  Optimized: {result['optimized_explanation']} (act: {result['final_activation']:.4f})")
+    
+    # Visualize results
+    if results['feature_results']:
+        visualize_results(results['feature_results'])
+        
+        # Save results to CSV
+        if config.get('output', {}).get('save_csv', True):
+            save_results_to_csv(results, config)
     
     # Clean up
     clear_cache()

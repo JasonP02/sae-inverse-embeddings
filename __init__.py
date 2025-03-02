@@ -14,6 +14,16 @@ from .visualization import visualize_training, visualize_feature_activations
 from .explanation import generate_explanatory_prompt, run_explanation_experiment
 from .config import get_default_config, update_config
 from .utils import save_results_to_csv, print_tensor_stats
+from .pipeline import (
+    load_experiment_models,
+    collect_and_filter_data,
+    run_clustering,
+    analyze_clusters,
+    select_features,
+    optimize_feature,
+    generate_explanations,
+    visualize_results
+)
 
 __all__ = [
     # Models
@@ -50,4 +60,14 @@ __all__ = [
     # Utils
     'save_results_to_csv',
     'print_tensor_stats',
+    
+    # Pipeline
+    'load_experiment_models',
+    'collect_and_filter_data',
+    'run_clustering',
+    'analyze_clusters',
+    'select_features',
+    'optimize_feature',
+    'generate_explanations',
+    'visualize_results',
 ] 
