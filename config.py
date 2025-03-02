@@ -107,7 +107,7 @@ def get_default_config():
         'explanation': {
             'use_lm_coherence': True,        # Use language model for coherence
             'coherence_weight': 0.1,         # Weight of coherence loss
-            'max_steps': 1000,
+            'max_steps': 10,
             'lr': 1e-3,
             'lambda_reg': 1e-5,
             'length': 10,

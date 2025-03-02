@@ -155,7 +155,6 @@ print(f"Data collection complete: {filtered_acts.shape[0]} prompts, {filtered_ac
 # Run clustering analysis on the filtered features
 labels, reduced_acts = run_clustering(
     filtered_acts,
-    original_indices,
     config['clustering']
 )
 
@@ -166,11 +165,9 @@ print(f"Clustering complete: {len(np.unique(labels))} clusters identified")
 if config['clustering'].get('explore_clusters', True) and prompts:
     cluster_analysis = analyze_clusters(
         filtered_acts, 
-        original_indices,
-        labels, 
+        labels,
+        original_indices, 
         prompts,
-        model,
-        sae,
         config['clustering']
     )
     
@@ -178,16 +175,13 @@ if config['clustering'].get('explore_clusters', True) and prompts:
 
 # %% Step 5: Select target features
 # Select features based on clustering results
-selection_result = select_features(
+target_features = select_features(
     filtered_acts, 
-    original_indices,
     labels,
-    cluster_analysis if 'cluster_analysis' in locals() else None,
-    prompts,
+    original_indices,
     config['clustering']['selection']
 )
 
-target_features = selection_result['selected_indices']
 print(f"Feature selection complete: {len(target_features)} target features identified")
 
 # %% Step 6: Optimize prompts (can be run per feature)
@@ -221,9 +215,11 @@ if config['explanation'].get('use_lm_coherence', True) and lm is not None:
         'feature_results': feature_results
     }
     explanation_results = generate_explanations(
-        optimization_results,
         model, 
-        sae, 
+        sae,
+        optimization_results['feature_results'],
+        lm,
+        tokenizer,
         config['explanation']
     )
     

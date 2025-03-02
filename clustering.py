@@ -50,12 +50,12 @@ def filter_features(acts, config):
     print(f"Kept {mask.sum().item()} out of {n_features} features")
     return acts[:, mask], mask.nonzero(as_tuple=True)[0]
 
-def cluster_features(acts, config):
+def cluster_features(acts, clustering_config):
     """Cluster features directly using DBSCAN with cosine distance.
     
     Args:
         acts: Tensor of shape [n_prompts, n_filtered_features] containing filtered feature activations
-        config: Configuration dictionary with clustering parameters
+        clustering_config: Configuration dictionary with clustering parameters
         
     Returns:
         Tuple of (labels, normalized_acts) where labels is a numpy array of cluster labels
@@ -73,7 +73,7 @@ def cluster_features(acts, config):
     normalized_acts = feature_acts / (norms + 1e-10)  # Avoid division by zero
     
     # Get DBSCAN parameters from config
-    dbscan_config = config.get('dbscan', {})
+    dbscan_config = clustering_config.get('dbscan', {})
     eps_values = np.linspace(
         dbscan_config.get('eps_min', 0.1),
         dbscan_config.get('eps_max', 5),
