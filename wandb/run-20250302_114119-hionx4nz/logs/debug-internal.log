@@ -1,0 +1,16 @@
+{"time":"2025-03-02T11:41:19.995389721-05:00","level":"INFO","msg":"stream: starting","core version":"0.19.7","symlink path":"/home/j/Projects/sae-inverse-embeddings/wandb/run-20250302_114119-hionx4nz/logs/debug-core.log"}
+{"time":"2025-03-02T11:41:20.100102127-05:00","level":"INFO","msg":"created new stream","id":"hionx4nz"}
+{"time":"2025-03-02T11:41:20.100133784-05:00","level":"INFO","msg":"stream: started","id":"hionx4nz"}
+{"time":"2025-03-02T11:41:20.100149075-05:00","level":"INFO","msg":"writer: Do: started","stream_id":"hionx4nz"}
+{"time":"2025-03-02T11:41:20.100151376-05:00","level":"INFO","msg":"sender: started","stream_id":"hionx4nz"}
+{"time":"2025-03-02T11:41:20.100169966-05:00","level":"INFO","msg":"handler: started","stream_id":"hionx4nz"}
+{"time":"2025-03-02T11:41:20.253768477-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-03-02T11:41:20.403543785-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-03-02T11:41:20.403859315-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-03-02T11:41:20.952175-05:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-03-02T11:41:21.089850165-05:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2025-03-02T11:41:22.091969418-05:00","level":"INFO","msg":"stream: closing","id":"hionx4nz"}
+{"time":"2025-03-02T11:41:22.091980598-05:00","level":"INFO","msg":"handler: closed","stream_id":"hionx4nz"}
+{"time":"2025-03-02T11:41:22.091987088-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":"hionx4nz"}
+{"time":"2025-03-02T11:41:22.091997544-05:00","level":"INFO","msg":"sender: closed","stream_id":"hionx4nz"}
+{"time":"2025-03-02T11:41:22.092036361-05:00","level":"INFO","msg":"stream: closed","id":"hionx4nz"}

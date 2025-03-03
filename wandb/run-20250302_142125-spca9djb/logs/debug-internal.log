@@ -1,0 +1,15 @@
+{"time":"2025-03-02T14:21:25.602411871-05:00","level":"INFO","msg":"stream: starting","core version":"0.19.7","symlink path":"/home/j/Projects/sae-inverse-embeddings/wandb/run-20250302_142125-spca9djb/logs/debug-core.log"}
+{"time":"2025-03-02T14:21:25.706144079-05:00","level":"INFO","msg":"created new stream","id":"spca9djb"}
+{"time":"2025-03-02T14:21:25.706203405-05:00","level":"INFO","msg":"stream: started","id":"spca9djb"}
+{"time":"2025-03-02T14:21:25.706352853-05:00","level":"INFO","msg":"writer: Do: started","stream_id":"spca9djb"}
+{"time":"2025-03-02T14:21:25.706360573-05:00","level":"INFO","msg":"handler: started","stream_id":"spca9djb"}
+{"time":"2025-03-02T14:21:25.706507282-05:00","level":"INFO","msg":"sender: started","stream_id":"spca9djb"}
+{"time":"2025-03-02T14:21:25.875856628-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-03-02T14:21:34.292283162-05:00","level":"INFO","msg":"stream: closing","id":"spca9djb"}
+{"time":"2025-03-02T14:21:34.292359476-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-03-02T14:21:34.293183636-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-03-02T14:21:34.624634542-05:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-03-02T14:21:34.754930366-05:00","level":"INFO","msg":"handler: closed","stream_id":"spca9djb"}
+{"time":"2025-03-02T14:21:34.75495132-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":"spca9djb"}
+{"time":"2025-03-02T14:21:34.754983449-05:00","level":"INFO","msg":"sender: closed","stream_id":"spca9djb"}
+{"time":"2025-03-02T14:21:34.754993247-05:00","level":"INFO","msg":"stream: closed","id":"spca9djb"}

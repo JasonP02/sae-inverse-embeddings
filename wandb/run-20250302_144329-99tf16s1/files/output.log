@@ -1,0 +1,27 @@
+Loading models with config: dbscan
+Collecting data with n_prompts=10
+Loading prompts from WikiText...
+Added 10 prompts from WikiText
+Total unique prompts loaded: 10
+Processing batch 1/2...
+Collected activations for 10 prompts, 32768 features
+Entropy range: -0.00 to 2.26
+Sparsity range: 0.00 to 0.80
+Entropy percentiles: 10%=-0.0000, 50%=-0.0000, 90%=1.3812
+Sparsity percentiles: 10%=0.0000, 50%=0.0000, 90%=0.0000
+Kept 51 out of 32768 features
+Saving processed data to cache/processed_data_prompts_10_entropy_0.14_6.88_sparsity_0.18_0.85.pt...
+Data saved successfully.
+Running clustering with method=dbscan, UMAP=False
+DBSCAN with eps=0.33, found 2 clusters
+Clustering complete: found 2 clusters with 0.00% noise points
+/home/j/miniconda3/envs/slens/lib/python3.10/site-packages/sklearn/utils/deprecation.py:151: FutureWarning:
+
+'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+
+/home/j/miniconda3/envs/slens/lib/python3.10/site-packages/umap/umap_.py:1952: UserWarning:
+
+n_jobs value 1 overridden to 1 by setting random_state. Use no seed for parallelism.
+Saved cluster visualization to cluster_visualizations/clusters_20250302_144343.html
+Calculating metrics
+Run complete: found 2 clusters, silhouette=0.8215

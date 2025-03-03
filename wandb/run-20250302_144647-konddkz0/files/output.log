@@ -1,0 +1,33 @@
+Loading models with config: dbscan
+Collecting data with n_prompts=30
+Loading prompts from WikiText...
+Added 30 prompts from WikiText
+Total unique prompts loaded: 30
+Processing batch 1/4...
+Processing batch 2/4...
+Processing batch 3/4...
+Collected activations for 30 prompts, 32768 features
+Entropy range: -0.00 to 3.32
+Sparsity range: 0.00 to 0.70
+Entropy percentiles: 10%=-0.0000, 50%=-0.0000, 90%=2.4371
+Sparsity percentiles: 10%=0.0000, 50%=0.0000, 90%=0.0000
+Kept 15 out of 32768 features
+Saving processed data to cache/processed_data_prompts_30_entropy_0.35_3.91_sparsity_0.16_0.80.pt...
+Data saved successfully.
+Running clustering with method=dbscan, UMAP=False
+DBSCAN with eps=0.25, found 2 clusters
+Clustering complete: found 2 clusters with 0.00% noise points
+/home/j/miniconda3/envs/slens/lib/python3.10/site-packages/sklearn/utils/deprecation.py:151: FutureWarning:
+
+'force_all_finite' was renamed to 'ensure_all_finite' in 1.6 and will be removed in 1.8.
+
+/home/j/miniconda3/envs/slens/lib/python3.10/site-packages/umap/umap_.py:1952: UserWarning:
+
+n_jobs value 1 overridden to 1 by setting random_state. Use no seed for parallelism.
+
+/home/j/miniconda3/envs/slens/lib/python3.10/site-packages/umap/umap_.py:2462: UserWarning:
+
+n_neighbors is larger than the dataset size; truncating to X.shape[0] - 1
+Saved cluster visualization to cluster_visualizations/clusters_20250302_144700.html
+Calculating metrics
+Run complete: found 2 clusters, silhouette=0.8501

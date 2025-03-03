@@ -1,0 +1,5 @@
+Loading models with config: dbscan
+Loaded pretrained model EleutherAI/pythia-70m-deduped into HookedTransformer
+Collecting data with n_prompts=30
+Loading prompts from WikiText...
+[34m[1mwandb[0m: Ctrl + C detected. Stopping sweep.

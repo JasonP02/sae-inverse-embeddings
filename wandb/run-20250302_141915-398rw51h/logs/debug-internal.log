@@ -1,0 +1,16 @@
+{"time":"2025-03-02T14:19:15.585015915-05:00","level":"INFO","msg":"stream: starting","core version":"0.19.7","symlink path":"/home/j/Projects/sae-inverse-embeddings/wandb/run-20250302_141915-398rw51h/logs/debug-core.log"}
+{"time":"2025-03-02T14:19:15.687528632-05:00","level":"INFO","msg":"created new stream","id":"398rw51h"}
+{"time":"2025-03-02T14:19:15.68754632-05:00","level":"INFO","msg":"stream: started","id":"398rw51h"}
+{"time":"2025-03-02T14:19:15.68759345-05:00","level":"INFO","msg":"writer: Do: started","stream_id":"398rw51h"}
+{"time":"2025-03-02T14:19:15.687601362-05:00","level":"INFO","msg":"sender: started","stream_id":"398rw51h"}
+{"time":"2025-03-02T14:19:15.687617676-05:00","level":"INFO","msg":"handler: started","stream_id":"398rw51h"}
+{"time":"2025-03-02T14:19:15.819798977-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-03-02T14:19:22.437887187-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-03-02T14:19:22.438174047-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-03-02T14:19:22.777245412-05:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-03-02T14:19:22.914633483-05:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2025-03-02T14:19:23.918009014-05:00","level":"INFO","msg":"stream: closing","id":"398rw51h"}
+{"time":"2025-03-02T14:19:23.918041671-05:00","level":"INFO","msg":"handler: closed","stream_id":"398rw51h"}
+{"time":"2025-03-02T14:19:23.918055091-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":"398rw51h"}
+{"time":"2025-03-02T14:19:23.918068018-05:00","level":"INFO","msg":"sender: closed","stream_id":"398rw51h"}
+{"time":"2025-03-02T14:19:23.918199256-05:00","level":"INFO","msg":"stream: closed","id":"398rw51h"}

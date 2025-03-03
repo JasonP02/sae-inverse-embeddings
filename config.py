@@ -36,7 +36,7 @@ def get_default_config():
             # Caching parameters
             'cache_data': True,
             'cache_dir': 'feature_cache',
-            'use_cached_data': False,
+            'use_cached_data': True,
             
             # Feature filtering parameters
             'filtering': {
@@ -51,32 +51,44 @@ def get_default_config():
         # Clustering parameters
         'clustering': {
             # General clustering settings
-            'method': 'dbscan',              # 'dbscan' or 'kmeans'
+            'method': 'hdbscan',             # 'hdbscan', 'dbscan', or 'kmeans'
             'visualize_clusters': True,      # Visualize with UMAP
             'n_clusters': 10,                # For kmeans or as target for DBSCAN
             'pca_multiplier': 3,             # n_components = pca_multiplier * n_clusters
+            'auto_install_dependencies': True, # Attempt to install missing dependencies
+            
+            # UMAP preprocessing
+            'use_umap_preprocessing': True,  # Whether to use UMAP before clustering
+            'umap': {
+                'n_components': 50,          # Number of dimensions to reduce to
+                'n_neighbors': 15,           # Number of neighbors to consider
+                'min_dist': 0.1,             # Minimum distance between points
+                'metric': 'cosine',          # Distance metric (cosine is good for text)
+            },
             
             # Cluster analysis
             'explore_clusters': True,                # Enable cluster activation analysis
             'visualize_cluster_heatmap': True,       # Show heatmap of cluster vs prompt activations
             'max_prompts_heatmap': 50,              # Maximum prompts to show in heatmap
             
-            # DBSCAN specific parameters
-            'dbscan': {
-                'eps_min': 0.1,              # Minimum epsilon for search
-                'eps_max': 5,                # Maximum epsilon for search
-                'eps_steps': 30,             # Number of steps in epsilon search
-                'min_samples': 1,            # Minimum samples for core point
+            # HDBSCAN specific parameters
+            'hdbscan': {
+                'min_cluster_size': 5,        # Minimum size for a cluster
+                'min_samples': 1,             # Min samples for a core point
+                'metric': 'euclidean',        # Distance metric (after UMAP, euclidean works well)
+                'cluster_selection_epsilon': 0.0,  # Used for extracting flat clusters
             },
+            
+
             
             # Cluster selection for feature extraction
             'selection': {
                 'strategy': 'all',           # Options: 'all', 'single', 'top_n'
-                'num_clusters': 3,           # If strategy is 'top_n', how many to select
+                'num_clusters': 1,           # If strategy is 'top_n', how many to select
                 'scoring_method': 'composite',  # How to score clusters: 'size', 'activation', 'max_activation', 'sparsity', 'composite'
-                'features_per_cluster': 1,   # How many features to take from each cluster
+                'features_per_cluster': 10,   # How many features to take from each cluster
                 'feature_selection_method': 'max',  # How to select features: 'mean', 'max', 'percentile'
-                'activation_percentile': 90,  # Percentile to use if method='percentile'
+                'activation_percentile': 50,  # Percentile to use if method='percentile'
             },
         },
         

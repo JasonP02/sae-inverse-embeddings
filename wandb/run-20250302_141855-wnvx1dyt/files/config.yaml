@@ -1,0 +1,84 @@
+_wandb:
+    value:
+        cli_version: 0.19.7
+        m: []
+        python_version: 3.10.16
+        t:
+            "1":
+                - 1
+                - 5
+                - 11
+                - 49
+                - 51
+                - 53
+                - 55
+                - 71
+                - 105
+            "2":
+                - 1
+                - 5
+                - 11
+                - 49
+                - 51
+                - 53
+                - 55
+                - 71
+                - 105
+            "3":
+                - 2
+                - 14
+                - 23
+                - 55
+            "4": 3.10.16
+            "5": 0.19.7
+            "6": 4.49.0
+            "8":
+                - 5
+            "12": 0.19.7
+            "13": linux-x86_64
+activation_threshold:
+    value: 0.19834115449296977
+clustering_method:
+    value: hdbscan
+dbscan_min_samples:
+    value: 3
+entropy_threshold_high:
+    value: 6.052670497733828
+entropy_threshold_low:
+    value: 0.3704030894257523
+eps_max:
+    value: 6.02785542381482
+eps_min:
+    value: 0.06848049918892087
+eps_steps:
+    value: 40
+hdbscan_cluster_selection_epsilon:
+    value: 0.2774071038570962
+hdbscan_metric:
+    value: euclidean
+hdbscan_min_cluster_size:
+    value: 20
+hdbscan_min_samples:
+    value: 5
+max_prompt_length:
+    value: 100
+min_prompt_length:
+    value: 10
+n_prompts:
+    value: 100
+sparsity_max:
+    value: 0.8057877230424102
+sparsity_min:
+    value: 0.08687364706135392
+umap_metric:
+    value: cosine
+umap_min_dist:
+    value: 0
+umap_n_components:
+    value: 50
+umap_n_neighbors:
+    value: 5
+use_pipeline:
+    value: true
+use_umap_preprocessing:
+    value: false

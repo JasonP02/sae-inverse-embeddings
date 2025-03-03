@@ -1,0 +1,48 @@
+wandb_version: 1
+
+activation_threshold:
+  value: 0.10080794658226744
+clustering_method:
+  value: dbscan
+dbscan_min_samples:
+  value: 5
+entropy_threshold_high:
+  value: 5.799967812031954
+entropy_threshold_low:
+  value: 0.12403336699519776
+eps_max:
+  value: 4.425420766804251
+eps_min:
+  value: 0.08780011740006756
+eps_steps:
+  value: 20
+hdbscan_cluster_selection_epsilon:
+  value: 0.18907732622130136
+hdbscan_metric:
+  value: manhattan
+hdbscan_min_cluster_size:
+  value: 2
+hdbscan_min_samples:
+  value: 2
+max_prompt_length:
+  value: 150
+min_prompt_length:
+  value: 10
+n_prompts:
+  value: 10
+sparsity_max:
+  value: 0.8860418250440519
+sparsity_min:
+  value: 0.05858169985017571
+umap_metric:
+  value: euclidean
+umap_min_dist:
+  value: 0.5
+umap_n_components:
+  value: 50
+umap_n_neighbors:
+  value: 30
+use_pipeline:
+  value: true
+use_umap_preprocessing:
+  value: false

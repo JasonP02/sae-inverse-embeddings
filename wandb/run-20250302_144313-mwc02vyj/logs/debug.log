@@ -1,0 +1,31 @@
+2025-03-02 14:43:13,627 INFO    Thread-91 (_run_job):579604 [wandb_setup.py:_flush():67] Current SDK version is 0.19.7
+2025-03-02 14:43:13,627 INFO    Thread-91 (_run_job):579604 [wandb_setup.py:_flush():67] Configure stats pid to 579604
+2025-03-02 14:43:13,627 INFO    Thread-91 (_run_job):579604 [wandb_setup.py:_flush():67] Loading settings from /home/j/.config/wandb/settings
+2025-03-02 14:43:13,627 INFO    Thread-91 (_run_job):579604 [wandb_setup.py:_flush():67] Loading settings from /home/j/Projects/sae-inverse-embeddings/wandb/settings
+2025-03-02 14:43:13,627 INFO    Thread-91 (_run_job):579604 [wandb_setup.py:_flush():67] Loading settings from environment variables
+2025-03-02 14:43:13,627 INFO    Thread-91 (_run_job):579604 [wandb_init.py:setup_run_log_directory():647] Logging user logs to /home/j/Projects/sae-inverse-embeddings/wandb/run-20250302_144313-mwc02vyj/logs/debug.log
+2025-03-02 14:43:13,627 INFO    Thread-91 (_run_job):579604 [wandb_init.py:setup_run_log_directory():648] Logging internal logs to /home/j/Projects/sae-inverse-embeddings/wandb/run-20250302_144313-mwc02vyj/logs/debug-internal.log
+2025-03-02 14:43:13,627 INFO    Thread-91 (_run_job):579604 [wandb_init.py:init():761] calling init triggers
+2025-03-02 14:43:13,627 INFO    Thread-91 (_run_job):579604 [wandb_init.py:init():766] wandb.init called with sweep_config: {'activation_threshold': 0.0603121391601974, 'clustering_method': 'hdbscan', 'dbscan_min_samples': 1, 'entropy_threshold_high': 5.556265882679739, 'entropy_threshold_low': 0.12386438254477992, 'eps_max': 3.711220331120357, 'eps_min': 0.09814351077036625, 'eps_steps': 30, 'hdbscan_cluster_selection_epsilon': 0.006185857777583736, 'hdbscan_metric': 'manhattan', 'hdbscan_min_cluster_size': 20, 'hdbscan_min_samples': 5, 'max_prompt_length': 100, 'min_prompt_length': 10, 'n_prompts': 10, 'sparsity_max': 0.8435811272957977, 'sparsity_min': 0.08463489565133647, 'umap_metric': 'euclidean', 'umap_min_dist': 0.1, 'umap_n_components': 50, 'umap_n_neighbors': 5, 'use_pipeline': True, 'use_umap_preprocessing': False}
+config: {'_wandb': {}}
+2025-03-02 14:43:13,627 INFO    Thread-91 (_run_job):579604 [wandb_init.py:init():784] starting backend
+2025-03-02 14:43:13,627 INFO    Thread-91 (_run_job):579604 [wandb_init.py:init():788] sending inform_init request
+2025-03-02 14:43:13,628 INFO    Thread-91 (_run_job):579604 [backend.py:_multiprocessing_setup():97] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2025-03-02 14:43:13,628 INFO    Thread-91 (_run_job):579604 [wandb_init.py:init():803] backend started and connected
+2025-03-02 14:43:13,629 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_config_callback():1261] config_cb None None {'activation_threshold': 0.0603121391601974, 'clustering_method': 'hdbscan', 'dbscan_min_samples': 1, 'entropy_threshold_high': 5.556265882679739, 'entropy_threshold_low': 0.12386438254477992, 'eps_max': 3.711220331120357, 'eps_min': 0.09814351077036625, 'eps_steps': 30, 'hdbscan_cluster_selection_epsilon': 0.006185857777583736, 'hdbscan_metric': 'manhattan', 'hdbscan_min_cluster_size': 20, 'hdbscan_min_samples': 5, 'max_prompt_length': 100, 'min_prompt_length': 10, 'n_prompts': 10, 'sparsity_max': 0.8435811272957977, 'sparsity_min': 0.08463489565133647, 'umap_metric': 'euclidean', 'umap_min_dist': 0.1, 'umap_n_components': 50, 'umap_n_neighbors': 5, 'use_pipeline': True, 'use_umap_preprocessing': False}
+2025-03-02 14:43:13,629 INFO    Thread-91 (_run_job):579604 [wandb_init.py:init():896] updated telemetry
+2025-03-02 14:43:13,633 INFO    Thread-91 (_run_job):579604 [wandb_init.py:init():920] communicating run to backend with 90.0 second timeout
+2025-03-02 14:43:13,848 INFO    Thread-91 (_run_job):579604 [wandb_init.py:init():995] starting run threads in backend
+2025-03-02 14:43:13,942 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_console_start():2377] atexit reg
+2025-03-02 14:43:13,942 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_redirect():2227] redirect: wrap_raw
+2025-03-02 14:43:13,942 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_redirect():2292] Wrapping output streams.
+2025-03-02 14:43:13,942 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_redirect():2317] Redirects installed.
+2025-03-02 14:43:13,942 INFO    Thread-91 (_run_job):579604 [wandb_init.py:init():1037] run started, returning control to user process
+2025-03-02 14:43:23,840 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_finish():2112] finishing run thajpo/sae-clustering-sweep/mwc02vyj
+2025-03-02 14:43:23,840 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_atexit_cleanup():2342] got exitcode: 0
+2025-03-02 14:43:23,840 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_restore():2324] restore
+2025-03-02 14:43:23,840 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_restore():2330] restore done
+2025-03-02 14:43:25,387 INFO    MsgRouterThr:579604 [mailbox.py:close():115] Closing mailbox, abandoning 1 handles.
+2025-03-02 14:43:25,388 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_footer_history_summary_info():3958] rendering history
+2025-03-02 14:43:25,388 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_footer_history_summary_info():3990] rendering summary
+2025-03-02 14:43:25,389 INFO    Thread-91 (_run_job):579604 [wandb_run.py:_footer_sync_info():3919] logging synced files

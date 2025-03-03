@@ -11,9 +11,8 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer
 from models import load_models, clear_cache, get_feature_activations, get_similar_tokens
 from data import load_diverse_prompts, collect_activations, get_cache_filename, load_processed_data, save_processed_data
 from clustering import filter_features, cluster_features, visualize_clusters, select_target_features, explore_cluster_activations
-from optimization import optimize_embeddings, analyze_results, optimize_for_max_response
+from optimization import optimize_embeddings, analyze_results
 from visualization import visualize_training, visualize_feature_activations, visualize_multiple_features, visualize_token_heatmap
-from explanation import run_explanation_experiment
 
 
 def get_device_from_config(config):
@@ -221,43 +220,3 @@ def optimize_feature(model, sae, feature_id, optimization_config, visualize=None
     clear_cache()
     
     return feature_data
-
-
-def generate_explanations(model, sae, feature_results, lm, tokenizer, explanation_config):
-    """Generate explanations for optimized features.
-    
-    Args:
-        model: The transformer model
-        sae: The sparse autoencoder model
-        feature_results: Results from feature optimization
-        lm: Language model for coherence scoring
-        tokenizer: Tokenizer for language model
-        explanation_config: Configuration for explanation generation
-        
-    Returns:
-        Dictionary with explanation results
-    """
-    # Generate explanations
-    return run_explanation_experiment(
-        model, sae, feature_results,
-        explanation_config
-    )
-
-
-def optimize_features(selected_indices, model, sae, optimization_config):
-    """Optimize feature activations to maximize response.
-    
-    Args:
-        selected_indices: Indices of features to optimize
-        model: The transformer model
-        sae: The sparse autoencoder model
-        optimization_config: Configuration for optimization
-        
-    Returns:
-        Dictionary with optimization results
-    """
-    # Run optimization
-    return optimize_for_max_response(
-        model, sae, selected_indices, 
-        optimization_config
-    ) 

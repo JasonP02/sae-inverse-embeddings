@@ -1,0 +1,1 @@
+{"_timestamp":1.7409340618675408e+09,"noise_ratio":1,"silhouette":-1,"n_clusters":0,"prompt_coherence":-1,"cluster_size_std":0,"cluster_activation_entropy":0,"_runtime":14.093128501,"sparsity_preservation":-1,"_step":0,"_wandb":{"runtime":14},"calinski_harabasz":-1,"davies_bouldin":-1,"mean_cluster_size":0}
