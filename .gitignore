@@ -1,0 +1,25 @@
+# Directories
+feature_cache/
+__pycache__/
+.ipynb_checkpoints/
+
+# Data files
+*.pt
+*.pth
+*.pkl
+*.npy
+*.npz
+*.h5
+*.hdf5
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Large media files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.avi

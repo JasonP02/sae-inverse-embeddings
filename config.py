@@ -1,154 +1,124 @@
 import torch
 
-def get_default_config():
-    """Return default configuration settings in a hierarchical structure."""
-    return {
-        # Pipeline control - enable/disable entire sections
-        'pipeline': {
-            'run_data_collection': True,      # Collect and filter data
-            'run_clustering': True,           # Run clustering analysis
-            'run_feature_selection': True,    # Select features from clusters
-            'run_prompt_optimization': True,  # Optimize prompts for selected features
-            'run_explanations': True,         # Generate explanations for features
-        },
+class Config:
+    """Config class that automatically updates when config.py changes."""
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._config = None
+        return cls._instance
+    
+    @property
+    def config(self):
+        """Get the current config, refreshing from get_default_config."""
+        self._config = get_default_config()
+        return self._config
+    
+    def __getitem__(self, key):
+        """Allow dictionary-style access to config."""
+        return self.config[key]
+    
+    def get(self, key, default=None):
+        """Mimic dict.get() functionality."""
+        return self.config.get(key, default)
+    
+    def update(self, updates):
+        """Update configuration with new values."""
+        if updates is None:
+            return
+            
+        def _update_dict_recursive(d, u):
+            for k, v in u.items():
+                if isinstance(v, dict) and k in d and isinstance(d[k], dict):
+                    d[k] = _update_dict_recursive(d[k].copy(), v)
+                else:
+                    d[k] = v
+            return d
         
-        # Hardware settings
-        'hardware': {
-            'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-        },
+        self._config = _update_dict_recursive(self.config.copy(), updates)
+        return self._config
+
+def get_default_config():
+    """Return flattened configuration settings."""
+    return {
+        # Hardware
+        'device': 'cuda' if torch.cuda.is_available() else 'cpu',
         
         # Model settings
-        'model': {
-            'transformer': "EleutherAI/pythia-70m-deduped",
-            'sae_release': "pythia-70m-deduped-mlp-sm",
-            'sae_hook': "blocks.3.hook_mlp_out",
-            'lm': "distilgpt2"  # For coherence scoring
-        },
+        'transformer': "EleutherAI/pythia-70m-deduped",
+        'sae_release': "pythia-70m-deduped-mlp-sm",
+        'sae_hook': "blocks.3.hook_mlp_out",
+        'lm': "distilgpt2",
         
-        # Data collection & processing settings
-        'data': {
-            # Collection parameters
-            'n_prompts': 100,
-            'min_prompt_length': 10,
-            'max_prompt_length': 100,
-            'batch_size': 10,  # Batch size for processing prompts
-            
-            # Caching parameters
-            'cache_data': True,
-            'cache_dir': 'feature_cache',
-            'use_cached_data': True,
-            
-            # Feature filtering parameters
-            'filtering': {
-                'entropy_threshold_low': 0.25,   # Minimum entropy for feature selection
-                'entropy_threshold_high': 5.0,   # Maximum entropy for feature selection
-                'sparsity_min': 0.1,             # Minimum activation sparsity
-                'sparsity_max': 0.95,            # Maximum activation sparsity
-                'activation_threshold': 0.1,     # Threshold for considering a feature activated
-            },
-        },
+        # Data collection
+        'n_prompts': 10000,
+        'min_prompt_length': 10,
+        'max_prompt_length': 100,
+        'batch_size': 1,
         
-        # Clustering parameters
-        'clustering': {
-            # General clustering settings
-            'method': 'hdbscan',             # 'hdbscan', 'dbscan', or 'kmeans'
-            'visualize_clusters': True,      # Visualize with UMAP
-            'n_clusters': 10,                # For kmeans or as target for DBSCAN
-            'pca_multiplier': 3,             # n_components = pca_multiplier * n_clusters
-            'auto_install_dependencies': True, # Attempt to install missing dependencies
-            
-            # UMAP preprocessing
-            'use_umap_preprocessing': True,  # Whether to use UMAP before clustering
-            'umap': {
-                'n_components': 50,          # Number of dimensions to reduce to
-                'n_neighbors': 15,           # Number of neighbors to consider
-                'min_dist': 0.1,             # Minimum distance between points
-                'metric': 'cosine',          # Distance metric (cosine is good for text)
-            },
-            
-            # Cluster analysis
-            'explore_clusters': True,                # Enable cluster activation analysis
-            'visualize_cluster_heatmap': True,       # Show heatmap of cluster vs prompt activations
-            'max_prompts_heatmap': 50,              # Maximum prompts to show in heatmap
-            
-            # HDBSCAN specific parameters
-            'hdbscan': {
-                'min_cluster_size': 5,        # Minimum size for a cluster
-                'min_samples': 1,             # Min samples for a core point
-                'metric': 'euclidean',        # Distance metric (after UMAP, euclidean works well)
-                'cluster_selection_epsilon': 0.0,  # Used for extracting flat clusters
-            },
-            
-
-            
-            # Cluster selection for feature extraction
-            'selection': {
-                'strategy': 'all',           # Options: 'all', 'single', 'top_n'
-                'num_clusters': 1,           # If strategy is 'top_n', how many to select
-                'scoring_method': 'composite',  # How to score clusters: 'size', 'activation', 'max_activation', 'sparsity', 'composite'
-                'features_per_cluster': 10,   # How many features to take from each cluster
-                'feature_selection_method': 'max',  # How to select features: 'mean', 'max', 'percentile'
-                'activation_percentile': 50,  # Percentile to use if method='percentile'
-            },
-        },
+        # Caching
+        'cache_data': True,
+        'cache_dir': 'feature_cache',
+        'use_cached_data': True,
         
-        # Prompt optimization parameters
-        'optimization': {
-            # Sequence parameters
-            'length': 10,                    # Length of token sequence to optimize
-            
-            # Training parameters
-            'max_steps': 250,
-            'lr': 1e-3,
-            'lambda_reg': 1e-5,
-            
-            # Regularization options
-            'diversity_penalty': 0.0,        # Penalty for token similarity across positions
-            'diversity_window': 5,
-            'repetition_penalty': 0.0,       # Penalty for repeating tokens
-            'repetition_window': 5,
-            'noise_scale': 0.5,
-            
-            # Visualization
-            'visualize_training': False,
-            'show_full_sequence': True,
-            'verbose': True,                 # Print optimization progress
-        },
+        # Feature filtering
+        'entropy_threshold_low': 0.0,
+        'entropy_threshold_high': 15.0,
+        'sparsity_min': 0.00,
+        'sparsity_max': 1.0,
+        'activation_threshold': 0.005,
         
-        # Explanation generation parameters
-        'explanation': {
-            'use_lm_coherence': True,        # Use language model for coherence
-            'coherence_weight': 0.1,         # Weight of coherence loss
-            'max_steps': 10,
-            'lr': 1e-3,
-            'lambda_reg': 1e-5,
-            'length': 10,
-            'optimize_explanations': True,    # Whether to optimize explanations
-            'frozen_prefix_length': 4,        # Number of tokens to freeze at start
-        },
+        # Clustering
+        'clustering_method': 'hdbscan',
+        'visualize_clusters': True,
+        'n_clusters': 10,
+        'pca_multiplier': 3,
         
-        # Output settings
-        'output': {
-            'verbose': True,
-            'save_results': False,
-            'save_csv': True,
-            'csv_output_dir': 'feature_results',
-        },
+        # UMAP settings
+        'use_umap': True,
+        'umap_components': 50,
+        'umap_neighbors': 15,
+        'umap_min_dist': 0.1,
+        'umap_metric': 'cosine',
+        
+        # HDBSCAN settings
+        'min_cluster_size': 5,
+        'min_samples': 1,
+        'cluster_metric': 'euclidean',
+        'cluster_selection_epsilon': 0.0,
+        
+        # Feature selection
+        'selection_strategy': 'all',
+        'num_clusters': 1,
+        'scoring_method': 'composite',
+        'features_per_cluster': 10,
+        'feature_selection_method': 'max',
+        'activation_percentile': 50,
+        
+        # Optimization
+        'sequence_length': 10,
+        'max_steps': 250,
+        'learning_rate': 1e-3,
+        'lambda_reg': 1e-5,
+        'diversity_penalty': 0.0,
+        'diversity_window': 5,
+        'repetition_penalty': 0.0,
+        'repetition_window': 5,
+        'noise_scale': 0.5,
+        
+        # Explanation
+        'use_lm_coherence': True,
+        'coherence_weight': 0.1,
+        'frozen_prefix_length': 4,
+        
+        # Output
+        'verbose': True,
+        'save_results': False,
+        'save_csv': True,
+        'csv_output_dir': 'feature_results',
     }
 
-def update_config(base_config, updates):
-    """Update configuration with new values, handling nested dictionaries properly."""
-    if updates is None:
-        return base_config
-        
-    result = base_config.copy()
-    
-    def _update_dict_recursive(d, u):
-        for k, v in u.items():
-            if isinstance(v, dict) and k in d and isinstance(d[k], dict):
-                d[k] = _update_dict_recursive(d[k].copy(), v)
-            else:
-                d[k] = v
-        return d
-    
-    return _update_dict_recursive(result, updates) 
+# Create a global config instance
+config = Config()
