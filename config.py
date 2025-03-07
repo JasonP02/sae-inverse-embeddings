@@ -74,7 +74,6 @@ def get_default_config():
         'clustering_method': 'hdbscan',
         'visualize_features': True,
         'n_clusters': 10,
-        'pca_multiplier': 3,
         
         # UMAP settings
         'use_umap': True,
@@ -84,16 +83,16 @@ def get_default_config():
         'umap_metric': 'cosine',
         
         # HDBSCAN settings
-        'min_cluster_size': 5,
-        'min_samples': 1,
-        'cluster_metric': 'euclidean',
-        'cluster_selection_epsilon': 0.0,
+        'hdbscan_min_cluster_size': 10,
+        'hdbscan_min_samples': 10,
+        'hdbscan_metric': 'precomputed',
+        'hdbscan_cluster_selection_epsilon': 0.01,
         
         # Feature selection
         'selection_strategy': 'all',
         'num_clusters': 1,
         'scoring_method': 'composite',
-        'features_per_cluster': 10,
+        'features_per_cluster': 7,
         'feature_selection_method': 'max',
         'activation_percentile': 50,
         
@@ -114,7 +113,7 @@ def get_default_config():
         'frozen_prefix_length': 4,
         
         # Output
-        'verbose': True,
+        'verbose': False,
         'save_results': False,
         'save_csv': True,
         'csv_output_dir': 'feature_results',
