@@ -53,9 +53,9 @@ def get_default_config():
         'lm': "distilgpt2",
         
         # Data collection
-        'n_prompts': 10000,
-        'min_prompt_length': 10,
-        'max_prompt_length': 100,
+        'n_prompts': 1000,
+        'min_prompt_length': 25,
+        'max_prompt_length': 250,
         'batch_size': 1,
         
         # Caching
@@ -66,13 +66,13 @@ def get_default_config():
         # Feature filtering
         'entropy_threshold_low': 0.0,
         'entropy_threshold_high': 15.0,
-        'sparsity_min': 0.00,
+        'sparsity_min': 0.005,
         'sparsity_max': 1.0,
         'activation_threshold': 0.005,
         
         # Clustering
         'clustering_method': 'hdbscan',
-        'visualize_clusters': True,
+        'visualize_features': True,
         'n_clusters': 10,
         'pca_multiplier': 3,
         
